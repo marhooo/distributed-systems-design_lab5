@@ -20,16 +20,12 @@ async def run_scenario(scenario_type):
     start_time = time.time()
     tasks = []
     
-    # Конфігурація: 10 клієнтів по 1000 запитів (для тесту зменшимо до 1000, 
-    # щоб не чекати довго, для лаби ставте 10000)
     NUM_CLIENTS = 10
-    REQUESTS_PER_CLIENT = 1000 # Змініть на 10000 згідно завдання
+    REQUESTS_PER_CLIENT = 10000
     
     print(f"Starting Scenario {scenario_type} with {NUM_CLIENTS} clients, {REQUESTS_PER_CLIENT} reqs each...")
 
     for i in range(NUM_CLIENTS):
-        # Сценарій 1: Різні юзери (user_0 ... user_9)
-        # Сценарій 2: Один юзер (user_test)
         user_id = f"user_{i}" if scenario_type == 1 else "user_test"
         tasks.append(client_task(i, user_id, REQUESTS_PER_CLIENT))
 
@@ -44,12 +40,10 @@ async def run_scenario(scenario_type):
     print(f"Total Requests: {total_requests}")
     print(f"RPS (Requests per Second): {rps:.2f}")
 
-    # Перевірка балансів
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{FACADE_URL}/accounts")
         print("Final Balances:", resp.json())
         
-        # Отримання статистики затримок
         stats = await client.get(f"{FACADE_URL}/stats")
         print("Internal Latency Stats:", stats.json())
 
