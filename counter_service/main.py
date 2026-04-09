@@ -8,11 +8,9 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-# Зчитуємо конфігурацію зі змінних середовища (ConfigMap в Kubernetes)
 HZ_MEMBERS = os.getenv("HZ_MEMBERS", "hazelcast:5701").split(",")
 MQ_NAME = os.getenv("MQ_NAME", "transaction_queue")
 
-# Підключення до БД (ім'я хоста 'postgres-db' відповідає імені сервісу в K8s)
 def get_db_connection():
     return psycopg2.connect(
         host="postgres-db",
@@ -21,12 +19,10 @@ def get_db_connection():
         password="password"
     )
 
-# Фоновий потік для вичитування повідомлень з Hazelcast Queue
 def consume_queue():
     print(f"Connecting to Hazelcast cluster: {HZ_MEMBERS}")
     client = None
-    
-    # Чекаємо, поки Hazelcast підніметься у кластері K8s
+
     while client is None:
         try:
             client = hazelcast.HazelcastClient(
@@ -42,11 +38,9 @@ def consume_queue():
     
     while True:
         try:
-            # Блокує потік, поки не з'явиться нове повідомлення
             item = queue.take() 
             tx = json.loads(item)
             
-            # Атомарний запис/оновлення у PostgreSQL
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("""
@@ -66,7 +60,6 @@ def consume_queue():
 
 @app.on_event("startup")
 def startup():
-    # 1. Ініціалізація бази даних (з повторними спробами на випадок повільного старту БД)
     retries = 5
     while retries > 0:
         try:
@@ -88,7 +81,6 @@ def startup():
             time.sleep(3)
             retries -= 1
 
-    # 2. Запуск фонового консьюмера черги
     threading.Thread(target=consume_queue, daemon=True).start()
 
 @app.get("/balance/{user_id}")
@@ -100,7 +92,6 @@ def get_balance(user_id: str):
         res = cur.fetchone()
         cur.close()
         conn.close()
-        # Повертаємо 0, якщо користувача ще немає в базі
         return {"balance": res[0] if res else 0}
     except Exception as e:
         print(f"Error fetching balance: {e}")
