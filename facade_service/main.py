@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# Зчитуємо конфігурацію, яку K8s передасть через ConfigMap
 HZ_MEMBERS = os.getenv("HZ_MEMBERS", "hazelcast:5701").split(",")
 MQ_NAME = os.getenv("MQ_NAME", "transaction_queue")
 
@@ -35,14 +34,12 @@ class TransactionRequest(BaseModel):
 async def process_transaction(tx: TransactionRequest):
     transaction_id = str(uuid.uuid4())
     
-    # K8s автоматично збалансує цей запит на одну з 3-х нод logging-service
     async with httpx.AsyncClient() as client:
         try:
             await client.post(f"{LOGGING_URL}/log", json={"uuid": transaction_id, "msg": tx.dict()}, timeout=2.0)
         except Exception as e:
             print(f"Logging failed: {e}")
 
-    # Відправка в MQ
     if tx_queue:
         tx_queue.put(json.dumps(tx.dict()))
 
