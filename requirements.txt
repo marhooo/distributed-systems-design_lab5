@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+httpx
+hazelcast-python-client
+psycopg2-binary

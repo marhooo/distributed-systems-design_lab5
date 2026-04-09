@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bank_db
+      
+  hz1:
+    image: hazelcast/hazelcast:5.3.6
+  hz2:
+    image: hazelcast/hazelcast:5.3.6
+  hz3:
+    image: hazelcast/hazelcast:5.3.6
+
+  config-server:
+    build:
+      context: .
+      dockerfile: config_server/Dockerfile
+    ports:
+      - "8085:8000"
+
+  counter-service:
+    build:
+      context: .
+      dockerfile: counter_service/Dockerfile
+    hostname: counter-service
+    environment:
+      - HOSTNAME=counter-service
+    depends_on:
+      - postgres-db
+      - config-server
+      - hz1
+
+  logging1:
+    build:
+      context: .
+      dockerfile: logging_service/Dockerfile
+    hostname: logging1
+    environment:
+      - INSTANCE_NAME=Logging-Node-1
+      - HOSTNAME=logging1
+    depends_on:
+      - config-server
+      - hz1
+  logging2:
+    build:
+      context: .
+      dockerfile: logging_service/Dockerfile
+    hostname: logging2
+    environment:
+      - INSTANCE_NAME=Logging-Node-2
+      - HOSTNAME=logging2
+    depends_on:
+      - config-server
+      - hz1
+  logging3:
+    build:
+      context: .
+      dockerfile: logging_service/Dockerfile
+    hostname: logging3
+    environment:
+      - INSTANCE_NAME=Logging-Node-3
+      - HOSTNAME=logging3
+    depends_on:
+      - config-server
+      - hz1
+
+  facade-service:
+    build:
+      context: .
+      dockerfile: facade_service/Dockerfile
+    ports:
+      - "8080:8000"
+    depends_on:
+      - config-server
